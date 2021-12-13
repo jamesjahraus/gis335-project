@@ -236,7 +236,7 @@ writeOGR(node_data, ".", "pres_tsys01", driver = "ESRI Shapefile")
 
 ### Investigate Spatial Autocorrelation
 
-* Space - Univariate Moran's I
+* Space - Univariate Local Moran's I
 
 > Goal determine spatial autocorrelation of temp nodes
 
@@ -252,6 +252,11 @@ writeOGR(node_data, ".", "pres_tsys01", driver = "ESRI Shapefile")
 
 *Cases in the lower-left quadrand indicate node temps, and local average node temps*
 *are lower than overall average node temps.*
+
+**LISA Cluster Map** 
+
+*(high-high) high temp values have neighbors with high temp values*
+*(low-low) low temp values have neighbors with low temp values*
 
 **We expect temperature readings for sensors close to each other to be similar, and**
 **temperature readings for sensors far from each other to be different.**
