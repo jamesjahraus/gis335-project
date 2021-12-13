@@ -359,7 +359,7 @@ coordinates(node_data) <- node_data[, c("lon", "lat")]
 # https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
 proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
-# writeOGR(node_data, '.', 'aot_final', driver = 'ESRI
+# writeOGR(node_data, '.', 'aot_tsys01', driver = 'ESRI
 # Shapefile')
 ```
 
