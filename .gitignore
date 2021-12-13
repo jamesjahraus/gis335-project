@@ -1,5 +1,4 @@
 # Custom
-/Data
 *.zip
 *.Rproj
 *.shp
@@ -9,6 +8,8 @@
 *.log
 *.pdf
 *.Rmd
+*.csv
+*.csv.gz
 
 # History files
 .Rhistory
