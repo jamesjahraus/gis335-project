@@ -141,3 +141,79 @@ proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
 writeOGR(node_data, ".", "pres_all_sensors", driver = "ESRI Shapefile")
 ```
+
+
+## Explore the Data in GeoDa
+
+* Overview of the [GeoDa Cheat Sheet](http://geodacenter.github.io/cheatsheet.html)
+
+
+* Generate box plots for each sensor
+
+> Goal explore the distribution of each sensor.
+
+
+* Generate scatter plots for each sensor
+
+> Goal explore correlations between sensor data.
+
+> Maybe the sensors are integrated and high pressure causes faulty reading on **tsys01**
+
+
+It appears that node **001e0610e809** is not working correctly, and node **001e0611536c**
+has no tsys01 sensor.
+
+
+## Generate Shapefile for tsys01
+
+**Choose the Hour for Node Data**
+
+```{r final_node_data}
+# Load Packages
+library(tidyverse)
+library(lubridate)
+library(sp)
+library(rgdal)
+
+# Clear Workspace
+rm(list = ls())
+
+# Read Data
+sensor_data <- read.csv("Data/data.csv.gz")
+nodes <- read.csv("Data/nodes.csv")
+
+# Fix timestamp so GeoDa doesn't crash on import
+sensor_data$timestamp <- ymd_hms(sensor_data$timestamp)
+nodes$start_timestamp <- ymd_hms(nodes$start_timestamp)
+nodes$end_timestamp <- ymd_hms(nodes$end_timestamp)
+
+# Filter Sensors by Sensor for hour
+fhour <- 14 # filter hour
+
+# tsys01 temperature C
+temp_tsys01 <- sensor_data %>%
+  filter(sensor == "tsys01") %>%
+  filter(parameter == "temperature") %>%
+  filter(hour(timestamp) >= fhour) %>%
+  filter(fhour >= hour(timestamp)) %>%
+  group_by(node_id) %>%
+  summarize(t_tsys01 = mean(value_hrf))
+
+# Remove outlier nodes 001e0610e809, and 001e0611536c
+temp_tsys01 <- subset(temp_tsys01, node_id != "001e0610e809")
+temp_tsys01 <- subset(temp_tsys01, node_id != "001e0611536c")
+
+# Join Sensor Data by Nodes
+node_data <- merge(temp_tsys01, nodes, by = c("node_id"))
+
+# Convert node data to spatial object
+coordinates(node_data) <- node_data[,c("lon", "lat")]
+
+# set data to the same projection
+# proj4string(node.temps) <- CRS("+init=epsg:4326")
+# Error in CRS("+init=epsg:4326") : NA
+# https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
+proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
+
+writeOGR(node_data, ".", "pres_tsys01", driver = "ESRI Shapefile")
+```
