@@ -577,7 +577,77 @@ tmap_arrange(m.exp)
 ```
 
 
+*The variogram above produced by R depicts a low nugget value, meaning low noise.*
+*Also the semivariance stops increasing at ~ 4, meaning pairs in this range are*
+*spatially autocorrelated*
+
+
+From GIS 335 lecture notes *4_Variogram_interpolation.pptx*:
+
+
+> Based on Tobler’s First Law of Geography, we would expect near objects to have
+> more similar values and further objects to have less similar values. Or, near
+> objects  are expected to have low semivariance whereas samples that are more
+> separated  are expected to have high semivariance.
+> This is the concept of spatial autocorrelation.
+
+
+In the context of the aot sensor data, determining the spatial autocorrelation
+of the temperature data prior to performing the Kriging, to generate the temperature
+surface raster, is key to producing an accurate interpolation.
+
+
+We expect temperature readings for sensors close to each other to be similar, and
+temperature readings for sensors far from each other to be different. The GeoDa
+methods above and the variogram produced by R express spatial autocorrelation between
+the temperature readings of the nodes. Therefore the data are suitable to produce
+an accurate temperature surface raster.
+
+
+**Note:** An interesting exercise for further exploration is to investigate the
+temperature data for the bmp180 sensor. Remember that temperature data for that sensor
+had values above 40 C. I think this would provide a good example of data that is not
+spatially autocorrelated.
+
+
 ## Conclusion
+
+R is suited for data transformations. In this project we used R to transform csv data from
+the nodes and sensors into a shapefile. Then used R to combine the shapefile data
+with a grid into an interpolated temperature surface.
+
+
+In order to perform the data transformation steps there were necessary data exploration
+tasks. Inside the RStudio IDE viewing the data to make decisions requires more savvy.
+To perform a task as simple as generating a histogram requires that first you know
+that you need a histogram, and next you know how to write the code to display a histogram.
+
+
+To complement R GeoDa helps humans interface with the data. It provides intuitive icons
+and clear documentation to guide the user. A great example of the intersection between
+the graphic design of the user interface and the documentation is the [GeoDa Cheat Sheet](http://geodacenter.github.io/cheatsheet.html). The main menu bar of GeoDa
+encourages the user to explore. As mentioned above, R requires that you first need
+to know that you want to see a histogram. GeoDa presents the human user with many
+relevant options to explore data such as: outliers, patterns, correlations, clusters,
+spatial auto correlation, and trends. For this project I spent almost no time reading
+documentation about how to perform a task; I essentially just played around with almost
+every button leading to many aha moments of discovery.
+
+
+Without R I don't think that I could use GeoDa to create a shapefile of point
+data from each sensor at a specific time, remove outliers from the data, or
+generate an interpolated raster surface. Also without GeoDa I don't think I could
+use R to explore the data so intuitively, try many types of plots, or investigate
+spatial auto correlation of the node data from so many angles.
+
+
+GeoDa is excellent at exploratory spatial data analysis, just one of the components of
+spatial data analysis. The other components, visualization, spatial modeling, and
+data transformation (1. data wrangling) can be performed in collaboration with other
+systems like ArcGis Pro and R.
+
+
+1. *data wrangling is a term used in the aot workshop code. I found it funny.*
 
 ## References
 
