@@ -10,6 +10,14 @@ James Jahraus
     Sensors](#generate-shapefile-for-all-sensors)
 -   [Explore the Data in GeoDa](#explore-the-data-in-geoda)
 -   [Generate Shapefile for tsys01](#generate-shapefile-for-tsys01)
+-   [Explore Final Temperature Data
+    GeoDa](#explore-final-temperature-data-geoda)
+    -   [Investigate Outliers and
+        Patterns](#investigate-outliers-and-patterns)
+    -   [Investigate Spatial
+        Autocorrelation](#investigate-spatial-autocorrelation)
+-   [Interpolate a Temperature
+    Surface](#interpolate-a-temperature-surface)
 
 <!-- Environment Setup -->
 
@@ -218,3 +226,48 @@ proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
 writeOGR(node_data, ".", "pres_tsys01", driver = "ESRI Shapefile")
 ```
+
+## Explore Final Temperature Data GeoDa
+
+### Investigate Outliers and Patterns
+
+-   Generate box plot for tsys01
+
+> Goal explore the distribution of tsys01.
+
+-   Generate a bubble map for tsys01
+
+> Goal explore x y temp pattern
+
+### Investigate Spatial Autocorrelation
+
+-   Space - Univariate Moran’s I
+
+> Goal determine spatial autocorrelation of temp nodes
+
+**Generate Weights file GeoDa Tools \> Weights Manager**
+
+[L4: Spatial
+Autocorrelation](https://www.e-education.psu.edu/geog586/node/524)
+
+*Weights file we need a representation of the contiguity structure of
+the map,* *that is, which map units are neighbors to each other.*
+
+*Cases in the upper-right quadrant indicate nodes temps, and local
+average node temps* *are higher than overall average node temps.*
+
+*Cases in the lower-left quadrand indicate node temps, and local average
+node temps* *are lower than overall average node temps.*
+
+**We expect temperature readings for sensors close to each other to be
+similar, and** **temperature readings for sensors far from each other to
+be different.**
+
+Because there is spatial autocorrelation with the tsys01 data we can use
+Kriging to interpolate the temperature surface.
+
+## Interpolate a Temperature Surface
+
+**Choose the Hour for Node Data**
+
+![](gis335_presentation_JamesJahraus_files/figure-gfm/krig-1.png)<!-- -->
