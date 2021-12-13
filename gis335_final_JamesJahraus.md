@@ -251,10 +251,10 @@ For this sample bm180 sensor can have higher vl.
     Paper 2498. <https://dc.etsu.edu/etd/2498> ,
     <https://dc.etsu.edu/cgi/viewcontent.cgi?article=3881&context=etd>
 
--   PennState GEOG 586 - Geographic Information Analysis L4: Cluster
-    Analysis: Spatial Autocorrelation
-    <https://www.e-education.psu.edu/geog586/node/524>
-
 -   MAPPING AOT DATA WITH SPATIAL STATISTICS, ARRAY OF THINGS WORKSHOP
     2018 FACILITATED BY M. KOLAK
     <https://geodacenter.github.io/aot-workshop/>
+
+-   PennState GEOG 586 - Geographic Information Analysis L4: Cluster
+    Analysis: Spatial Autocorrelation
+    <https://www.e-education.psu.edu/geog586/node/524>
