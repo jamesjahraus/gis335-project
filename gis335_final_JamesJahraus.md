@@ -208,6 +208,11 @@ proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
 ### Explore Sensor Data in GeoDa
 
+**Note:** the shapefile data is temperature, humidity, and pressure data
+from Chicago 2018-08-25 between 12:00 and 13:00. This means that because
+it is August in Chicago the temperature should be \~ 20 C and probably
+not below 0 C or above 40 C.
+
 Each node has a tsys01 (temperature only), htu21d (temperature and
 humidity), and bmp180 (temperature and pressure) sensor. We are only
 interested in temperature, yet investigating the data for each sensor
@@ -227,16 +232,34 @@ GeoDa has table view to investigate the shapefile attributes.
 
 ![GeoDa Table View](Data/table_view.PNG)
 
-| node_id      | t_sys01 | t_ht21d | t_bm180 |
-|:-------------|:-------:|:-------:|:-------:|
-| 001e06109416 |  21.01  |  21.55  |  40.92  |
-| 001e0610fb4c |  20.91  |   NA    |  20.93  |
-| 001e0611536c |   NA    |  22.33  |  43.51  |
-| 001e0610e809 |  -4.21  |  20.44  |  21.09  |
+| node_id      | t_tsys01 | t_htu21d | t_bmp180 |
+|:-------------|:--------:|:--------:|:--------:|
+| 001e06109416 |  21.01   |  21.55   |  40.92   |
+| 001e0610fb4c |  20.91   |    NA    |  20.93   |
+| 001e0611536c |    NA    |  22.33   |  43.51   |
+| 001e0610e809 |  -4.21   |  20.44   |  21.09   |
 
 Sensor Temperature Variation
 
-For this sample bm180 sensor can have higher vl.
+**Notice** that for this sample some nodes have large differences in
+temperature values between sensors, and some nodes have no data for a
+particular sensor. To fix this we could use the temperature data from
+tsys01 first then if there is a problem, i.e. an outlier or NA then we
+could use data from the other sensors from the same node. Also some
+values are below 0 C and above 40 C.
+
+#### GeoDa Box Plots
+
+![GeoDa Table View](Data/box_plots_all.PNG)
+
+**Notice** that each sensor has outliers, and some sensors have large
+variation between temperature readings.
+
+#### GeoDa Scatter Plots
+
+To answer the question **Why does tsys01 sometimes produce incorrect
+data?** we could look for correlation between various sensor data using
+scatter plots.
 
 ## Results
 
