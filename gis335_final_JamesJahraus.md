@@ -15,8 +15,11 @@ James Jahraus
         Sensors](#generate-shapefile-for-all-sensors)
     -   [Explore Sensor Data in GeoDa](#explore-sensor-data-in-geoda)
     -   [Generate Final Shapefile](#generate-final-shapefile)
+    -   [Explore Final Temperature Data
+        GeoDa](#explore-final-temperature-data-geoda)
 -   [Results](#results)
--   [Discussion](#discussion)
+    -   [Interpolate a Temperature
+        Surface](#interpolate-a-temperature-surface)
 -   [Conclusion](#conclusion)
 -   [References](#references)
 
@@ -203,7 +206,8 @@ coordinates(node_data) <- node_data[, c("lon", "lat")]
 # https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
 proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
-writeOGR(node_data, ".", "aot_all_sensors", driver = "ESRI Shapefile")
+# writeOGR(node_data, '.', 'aot_all_sensors', driver =
+# 'ESRI Shapefile')
 ```
 
 ### Explore Sensor Data in GeoDa
@@ -355,12 +359,86 @@ coordinates(node_data) <- node_data[, c("lon", "lat")]
 # https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
 proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
-writeOGR(node_data, ".", "aot_final", driver = "ESRI Shapefile")
+# writeOGR(node_data, '.', 'aot_final', driver = 'ESRI
+# Shapefile')
 ```
+
+### Explore Final Temperature Data GeoDa
+
+#### Investigate Outliers and Patterns
+
+[GeoDa Cheat Sheet](http://geodacenter.github.io/cheatsheet.html)
+
+| Histogram                                                    |
+|:-------------------------------------------------------------|
+| <img src="Data/o1.PNG" id="id" class="class" height="400" /> |
+| Histogram showing distribution.                              |
+
+| Box_Map                                                      |
+|:-------------------------------------------------------------|
+| <img src="Data/o2.PNG" id="id" class="class" height="400" /> |
+| Spatial histogram.                                           |
+
+| Bubble_Chart                                                 |
+|:-------------------------------------------------------------|
+| <img src="Data/p1.PNG" id="id" class="class" height="400" /> |
+| Visualize temperature groups.                                |
+
+| Scatter_3D                                                   |
+|:-------------------------------------------------------------|
+| <img src="Data/p2.PNG" id="id" class="class" height="400" /> |
+| Visualize temperature groups in 3D, x: lon, y: lat, z: temp  |
+
+#### Investigate Spatial Autocorrelation
+
+[L4: Spatial
+Autocorrelation](https://www.e-education.psu.edu/geog586/node/524)
+
+[Weights File
+Creation](https://www.e-education.psu.edu/geog586/node/671)
+
+**Global Moran’s I**
+
+![Global Moran’s I](Data/sa1.PNG)
+
+**From L4 Spatial Autocorrelation:**
+
+-   Cases in the upper-right quadrant indicate nodes temps, and local
+    average node temps are higher than overall average node temps.
+
+-   Cases in the lower-left quadrand indicate node temps, and local
+    average node temps are lower than overall average node temps.
+
+*Indicates positive spatial autocorrelation for the tsys01 data.*
+
+**Local Indicators of Spatial Association - LISA**
+
+![Univariate Local Moran’s I](Data/sa2.PNG)
+
+**Spatial Correlogram**
+
+[Spatial Correlogram - GeoDa
+Workbook](https://geodacenter.github.io/workbook/5a_global_auto/lab5a.html#spatial-correlogram)
+
+> *A measure of global spatial autocorrelation… a local regression is
+> fit to the* *covariances or correlations computed for all pairs of
+> observations as a function* *of the distance between them.*
+
+![Spatial Correlogram](Data/sa3.PNG)
+
+*Depicts how the spatial autocorrelation changes with distance.*
+
+#### Thiessen Polygons
+
+*Early Estimate of Temperature Surface*
+
+![Thiessen Polygons - Natural Breaks](Data/thiessen_polygons.PNG)
 
 ## Results
 
-## Discussion
+### Interpolate a Temperature Surface
+
+![](gis335_final_JamesJahraus_files/figure-gfm/krig-1.png)<!-- -->![](gis335_final_JamesJahraus_files/figure-gfm/krig-2.png)<!-- -->
 
 ## Conclusion
 

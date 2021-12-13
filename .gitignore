@@ -9,6 +9,7 @@
 *.pdf
 *.csv
 *.csv.gz
+*.gwt
 
 # History files
 .Rhistory

@@ -199,7 +199,7 @@ coordinates(node_data) <- node_data[,c("lon", "lat")]
 # https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
 proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
-writeOGR(node_data, ".", "aot_all_sensors", driver = "ESRI Shapefile")
+# writeOGR(node_data, ".", "aot_all_sensors", driver = "ESRI Shapefile")
 ```
 
 
@@ -231,6 +231,9 @@ GeoDa has a table view to investigate the shapefile attributes.
 ```{r shapefile_table, echo = FALSE}
 library(tidyverse)
 library(knitr)
+
+# Clear Workspace
+rm(list = ls())
 
 shapefile_table <- data.frame(node_id = c("001e06109416", "001e0610fb4c", "001e0611536c",
                                           "001e0610e809"),
@@ -268,6 +271,9 @@ could look for correlation between various sensor data using scatter plots.
 ```{r sp_table, echo=FALSE}
 library(tidyverse)
 library(knitr)
+
+# Clear Workspace
+rm(list = ls())
 
 img1_path <- "Data/sp1.PNG"
 img2_path <- "Data/sp2.PNG"
@@ -309,6 +315,9 @@ humidity.
 ```{r temp_table, echo = FALSE}
 library(tidyverse)
 library(knitr)
+
+# Clear Workspace
+rm(list = ls())
 
 temp_table <- data.frame(node_id = c("001e0610e809", "Mean All Nodes", "001e0611536c"),
                  Hour7 = c(-7.6, 19.3, "NA"),
@@ -375,13 +384,198 @@ coordinates(node_data) <- node_data[,c("lon", "lat")]
 # https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
 proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
-writeOGR(node_data, ".", "aot_final", driver = "ESRI Shapefile")
+# writeOGR(node_data, ".", "aot_final", driver = "ESRI Shapefile")
 ```
+
+
+### Explore Final Temperature Data GeoDa
+
+
+#### Investigate Outliers and Patterns
+
+[GeoDa Cheat Sheet](http://geodacenter.github.io/cheatsheet.html)
+
+```{r outlier_table, echo=FALSE}
+library(tidyverse)
+library(knitr)
+
+# Clear Workspace
+rm(list = ls())
+
+img1_path <- "Data/o1.PNG"
+img2_path <- "Data/o2.PNG"
+img3_path <- "Data/p1.PNG"
+img4_path <- "Data/p2.PNG"
+
+histo <- data.frame(
+  Histogram = c(paste0("![](", img1_path, "){#id .class height=400px}"), "Histogram showing distribution.")
+)
+bm <- data.frame(
+  Box_Map = c(paste0("![](", img2_path, "){#id .class height=400px}"), "Spatial histogram.")
+)
+bc <- data.frame(
+  Bubble_Chart = c(paste0("![](", img3_path, "){#id .class height=400px}"), "Visualize temperature groups.")
+)
+s_3D <- data.frame(
+  Scatter_3D = c(paste0("![](", img4_path, "){#id .class height=400px}"), "Visualize temperature groups in 3D, x: lon, y: lat, z: temp")
+)
+
+knitr::kable(histo, format = 'pandoc')
+
+knitr::kable(bm, format = 'pandoc')
+
+knitr::kable(bc, format = 'pandoc')
+
+knitr::kable(s_3D, format = 'pandoc')
+```
+
+#### Investigate Spatial Autocorrelation
+
+
+[L4: Spatial Autocorrelation](https://www.e-education.psu.edu/geog586/node/524)
+
+
+[Weights File Creation](https://www.e-education.psu.edu/geog586/node/671)
+
+
+**Global Moran's I**
+
+![Global Moran's I](Data/sa1.PNG)
+
+**From L4 Spatial Autocorrelation:**
+
+* Cases in the upper-right quadrant indicate nodes temps, and local average node temps
+are higher than overall average node temps.
+
+* Cases in the lower-left quadrand indicate node temps, and local average node temps
+are lower than overall average node temps.
+
+*Indicates positive spatial autocorrelation for the tsys01 data.*
+
+
+**Local Indicators of Spatial Association - LISA**
+
+![Univariate Local Moran's I](Data/sa2.PNG)
+
+
+**Spatial Correlogram**
+
+
+[Spatial Correlogram - GeoDa Workbook](https://geodacenter.github.io/workbook/5a_global_auto/lab5a.html#spatial-correlogram)
+
+> *A measure of global spatial autocorrelation... a local regression is fit to the*
+> *covariances or correlations computed for all pairs of observations as a function*
+> *of the distance between them.*
+
+![Spatial Correlogram](Data/sa3.PNG)
+
+*Depicts how the spatial autocorrelation changes with distance.*
+
+
+#### Thiessen Polygons
+
+*Early Estimate of Temperature Surface*
+
+![Thiessen Polygons - Natural Breaks](Data/thiessen_polygons.PNG)
 
 
 ## Results
 
-## Discussion
+### Interpolate a Temperature Surface
+
+```{r krig, echo=FALSE}
+library(sp) #spatial data wrangling & analysis
+library(rgdal) #spatial data wrangling
+library(rgeos) #spatial data wrangling & analytics
+library(tidyverse) # data wrangling
+library(tmap) #modern data visualizations
+library(leaflet) #modern data visualizations
+library(lubridate) #data wrangling
+library(raster) #spatial raster data wrangling
+library(gstat) #kriging and geostatistics
+
+# Clear Workspace
+rm(list = ls())
+
+# Read Data
+sensor_data <- read.csv("Data/data.csv.gz")
+nodes <- read.csv("Data/nodes.csv")
+chiCA <- readOGR("Data","ChiComArea", verbose = FALSE)
+
+# Fix timestamp so GeoDa doesn't crash on import
+sensor_data$timestamp <- ymd_hms(sensor_data$timestamp)
+nodes$start_timestamp <- ymd_hms(nodes$start_timestamp)
+nodes$end_timestamp <- ymd_hms(nodes$end_timestamp)
+
+# Filter Sensors by Sensor for hour
+fhour <- 12 # filter hour
+
+# tsys01 temperature C
+temp_tsys01 <- sensor_data %>%
+  filter(sensor == "tsys01") %>%
+  filter(parameter == "temperature") %>%
+  filter(hour(timestamp) >= fhour) %>%
+  filter(fhour >= hour(timestamp)) %>%
+  group_by(node_id) %>%
+  summarize(t_tsys01 = mean(value_hrf))
+
+# Remove outlier nodes 001e0610e809, and 001e0611536c
+temp_tsys01 <- subset(temp_tsys01, node_id != "001e0610e809")
+temp_tsys01 <- subset(temp_tsys01, node_id != "001e0611536c")
+
+# Join Sensor Data by Nodes
+node_data <- merge(temp_tsys01, nodes, by = c("node_id"))
+
+# Convert node data to spatial object
+coordinates(node_data) <- node_data[,c("lon", "lat")]
+
+# generate a grid from Chicago area
+pt2grid <- function(ptframe,n) {
+  bb <- bbox(ptframe)  
+  ptcrs <- proj4string(ptframe)  
+  xrange <- abs(bb[1,1] - bb[1,2])  
+  yrange <- abs(bb[2,1] - bb[2,2])  
+  cs <- c(xrange/n,yrange/n)  
+  cc <- bb[,1] + (cs/2)  
+  dc <- c(n,n)  
+  x1 <- GridTopology(cellcentre.offset=cc,cellsize=cs,cells.dim=dc)  
+  x2 <- SpatialGrid(grid=x1,proj4string=CRS(ptcrs))
+  return(x2)
+}
+
+# plot 100 x 100 cell grid
+chi.grid <- pt2grid((chiCA),100)
+
+# set data to the same projection
+# proj4string(node.temps) <- CRS("+init=epsg:4326")
+# Error in CRS("+init=epsg:4326") : NA
+# https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
+proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
+proj4string(chiCA) <- CRS(sf::st_crs(4326)[[2]])
+proj4string(chi.grid) <- CRS(sf::st_crs(4326)[[2]])
+
+# variogram
+tmp.vgm <- variogram(node_data$t_tsys01 ~ 1, node_data)
+
+# plot exponential model
+tmp.fit.exp<- fit.variogram(tmp.vgm, model=vgm("Exp"))
+
+# prepare exponential
+temp.kriged.exp <- krige(node_data$t_tsys01 ~ 1, node_data, chi.grid, model = tmp.fit.exp, debug.level = 0)
+chi.temp.kriged.exp <- temp.kriged.exp[chiCA,]
+
+# plot exponential krig
+m.exp <- tm_shape(chi.temp.kriged.exp) +
+  tm_raster("var1.pred", style = "jenks", title = "Temperature (C)", palette = "BuPu") + tm_shape(node_data) + tm_dots(size=0.01) +
+  tm_layout(main.title = "Exp Krig Avg Temp 2018-08-25 between 12:00 and 13:00", main.title.size = 1.1) +
+  tm_legend(position = c("left", "bottom"))
+
+plot(tmp.vgm, tmp.fit.exp)
+
+tmap_arrange(m.exp)
+
+```
+
 
 ## Conclusion
 
