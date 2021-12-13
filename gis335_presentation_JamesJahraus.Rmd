@@ -1,0 +1,17 @@
+---
+title: "GIS 335 Final Presentation - GeoDa in Collaboration with R"
+author: "James Jahraus"
+date: "2021-12-13"
+output:
+ github_document:
+  toc: TRUE
+---
+
+<!-- Environment Setup -->
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),
+                      tidy=TRUE,
+                      echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
