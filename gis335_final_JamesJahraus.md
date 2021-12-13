@@ -1,4 +1,4 @@
-GIS 335 Final Project
+GIS 335 Final Project - GeoDa in Collaboration with R
 ================
 James Jahraus
 2021-12-13
@@ -14,7 +14,6 @@ James Jahraus
     -   [Generate Shapefile for All
         Sensors](#generate-shapefile-for-all-sensors)
     -   [Explore Sensor Data in GeoDa](#explore-sensor-data-in-geoda)
-        -   [Table Investigation](#table-investigation)
 -   [Results](#results)
 -   [Discussion](#discussion)
 -   [Conclusion](#conclusion)
@@ -22,7 +21,7 @@ James Jahraus
 
 <!-- Environment Setup -->
 
-# Background
+## Background
 
 Initially the idea was to compare GeoDa to R or ArcGIS. After
 investigating I found that the purpose of GeoDa is exploratory spatial
@@ -43,14 +42,14 @@ Also L4: Cluster Analysis: Spatial Autocorrelation from PennState GEOG
 It is not appropriate to compare GeoDa vs. R because they are
 complementary tools.
 
-# Objective
+## Objective
 
 Explore how GeoDa can be used in collaboration with R.
 
 The exploration is guided by Kolak (2018) Array of Things (aot)
 Workshop, and L4 from PennState GEOG 586.
 
-## Scenario to Guide the Exploration
+### Scenario to Guide the Exploration
 
 A local Chicago company is developing a temperature web service. The
 goal is to provide a temperature map of Chicago every hour with
@@ -78,7 +77,7 @@ interpolation of the point data to the temperature surface. The
 deliverable for the web service is an accurate temperature surface
 delivered every hour.
 
-## Steps to Create the Temperature Surface
+### Steps to Create the Temperature Surface
 
 > -   **R** generate a shapefile containing all the sensor data for a
 >     one hour range.
@@ -108,7 +107,7 @@ creation of the interpolated temperature surface every hour.
 
 -   Create web service to deliver temperature surface to clients.
 
-## Data
+### Data
 
 The data used is from the aot workshop and can be found:
 <https://geodacenter.github.io/aot-workshop/>
@@ -116,9 +115,9 @@ The data used is from the aot workshop and can be found:
 The actual data used is from GIS 335 Lab 5 R interp, included with week
 11 materials.
 
-# Methods
+## Methods
 
-## Generate Shapefile for All Sensors
+### Generate Shapefile for All Sensors
 
 ``` r
 # Load Packages
@@ -207,7 +206,7 @@ proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 # 'ESRI Shapefile')
 ```
 
-## Explore Sensor Data in GeoDa
+### Explore Sensor Data in GeoDa
 
 Each node has a tsys01 (temperature only), htu21d (temperature and
 humidity), and bmp180 (temperature and pressure) sensor. We are only
@@ -222,7 +221,7 @@ there is no data for the tsys01 sensor. We need to use GeoDa to explore
 the variables so the best decision can be made about the final
 temperature data.
 
-### Table Investigation
+#### Table Investigation
 
 GeoDa has table view to investigate the shapefile attributes.
 
@@ -239,13 +238,13 @@ Sensor Temperature Variation
 
 For this sample bm180 sensor can have higher vl.
 
-# Results
+## Results
 
-# Discussion
+## Discussion
 
-# Conclusion
+## Conclusion
 
-# References
+## References
 
 -   Johnson, Crystal, “Using Kriging, Cokriging, and GIS to Visualize Fe
     and Mn in Groundwater” (2015). Electronic Theses and Dissertations.
