@@ -1,0 +1,395 @@
+---
+title: "GIS 335 Final Project - GeoDa in Collaboration with R"
+author: "James Jahraus"
+date: "2021-12-13"
+output:
+ github_document:
+  toc: TRUE
+---
+
+<!-- Environment Setup -->
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),
+                      tidy=TRUE,
+                      echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+
+# output configurations
+
+# github
+# output:
+#  github_document:
+#   toc: TRUE
+
+# html
+# output:
+#  html_document:
+#   toc: TRUE
+
+# pdf
+# output: pdf_document
+# urlcolor: blue
+# toc: TRUE
+```
+
+## Background
+
+Initially the idea was to compare GeoDa to R or ArcGIS. After investigating
+I found that the purpose of GeoDa is exploratory spatial data analysis.
+This is supported in Johnson (2015) thesis:
+
+> *"In this study, the spatial autocorrelation exploration tool in GeoDa was used*
+> *to first determine the presence or absence of any spatial relationship in the*
+> *dataset. This provided the logical background for further analysis in ArcGIS."*
+
+Also L4: Cluster Analysis: Spatial Autocorrelation from PennState GEOG 586 states:
+
+> *"This week's project uses not a GIS program, but a package for exploratory*
+> *spatial data analysis called GeoDa. GeoDa is a good example of research software."*
+
+It is not appropriate to compare GeoDa vs. R because they are complementary tools.
+
+
+## Objective
+
+Explore how GeoDa can be used in collaboration with R.
+
+The exploration is guided by Kolak (2018) Array of Things (aot) Workshop, and L4 from
+PennState GEOG 586.
+
+
+### Scenario to Guide the Exploration
+
+A local Chicago company is developing a temperature web service. The goal is to provide
+a temperature map of Chicago every hour with temperature data at every location across the city.
+The website will use this data to send users the temperature given their lat lon coordinates.
+
+To create the temperature surface the company has a network of sensors. The aot data set
+represents a network of sensors throughout Chicago that collect temperature, humidity, and pressure.
+
+* Sensor **tsys01** collected only temp data in C [TSYS01 - High Accuracy Temperature Sensor](https://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Data+Sheet%7FTSYS01%7FA%7Fpdf%7FEnglish%7FENG_DS_TSYS01_A.pdf%7FG-NICO-018)
+
+* Sensor **htu21d** collected temp in C and humidity in RH data [HTU21D-F Temperature + Humidity Sensor](https://www.adafruit.com/product/1899)
+
+* Sensor **bmp180** collected temp in C and pressure in hPa [BMP180 Barometric Pressure/Temperature/Altitude Sensor](https://www.adafruit.com/product/1603)
+
+This data is point data, so making the temperature surface requires interpolation
+of the point data to the temperature surface. The deliverable for the web service
+is an accurate temperature surface delivered every hour.
+
+
+### Steps to Create the Temperature Surface
+
+> * **R** generate a shapefile containing all the sensor data for a one hour range.
+
+> * **GeoDa** explore the data to determine suitable temperature data for final surface.
+
+> * **R** generate the final shapefile containing final average temperature for a one hour range.
+
+> * **GeoDa** explore the temperature data and determine spatial autocorrelation of temperature data.
+
+> * **R** validate GeoDa spatial autocorrelation with a variogram in R.
+
+> * **R** use Kriging to interpolate temperature surface raster of Chicago.
+
+After this proof of concept the team will investigate automating the creation of
+the interpolated temperature surface every hour.
+
+* Integration of sensor data delivery to R service.
+
+* Create R service workers: shapefile generation, data scrubber, variogram metadata,
+ and temperature surface generator.
+ 
+* Create web service to deliver temperature surface to clients.
+
+
+### Data
+
+The data used is from the aot workshop and can be found: https://geodacenter.github.io/aot-workshop/
+
+The actual data used is from GIS 335 Lab 5 R interp, included with week 11 materials.
+
+
+## Methods
+
+
+### Generate Shapefile for All Sensors
+
+```{r node_data}
+# Load Packages
+library(tidyverse)
+library(lubridate)
+library(sp)
+library(rgdal)
+
+# Clear Workspace
+rm(list = ls())
+
+# Read Data
+sensor_data <- read.csv("Data/data.csv.gz")
+nodes <- read.csv("Data/nodes.csv")
+
+# Fix timestamp so GeoDa doesn't crash on import
+sensor_data$timestamp <- ymd_hms(sensor_data$timestamp)
+nodes$start_timestamp <- ymd_hms(nodes$start_timestamp)
+nodes$end_timestamp <- ymd_hms(nodes$end_timestamp)
+
+# Filter Sensors by Sensor for hour
+fhour <- 12 # filter hour
+
+# tsys01 temperature C
+temp_tsys01 <- sensor_data %>%
+  filter(sensor == "tsys01") %>%
+  filter(parameter == "temperature") %>%
+  filter(hour(timestamp) >= fhour) %>%
+  filter(fhour >= hour(timestamp)) %>%
+  group_by(node_id) %>%
+  summarize(t_tsys01 = mean(value_hrf))
+
+# htu21d temperature C
+temp_htu21d <- sensor_data %>%
+  filter(sensor == "htu21d") %>%
+  filter(parameter == "temperature") %>%
+  filter(hour(timestamp) >= fhour) %>%
+  filter(fhour >= hour(timestamp)) %>%
+  group_by(node_id) %>%
+  summarize(t_htu21d = mean(value_hrf))
+
+# htu21d humidity RH
+humid_htu21d <- sensor_data %>%
+  filter(sensor == "htu21d") %>%
+  filter(parameter == "humidity") %>%
+  filter(hour(timestamp) >= fhour) %>%
+  filter(fhour >= hour(timestamp)) %>%
+  group_by(node_id) %>%
+  summarize(h_htu21d = mean(value_hrf))
+
+# bmp180 temperature C
+temp_bmp180 <- sensor_data %>%
+  filter(sensor == "bmp180") %>%
+  filter(parameter == "temperature") %>%
+  filter(hour(timestamp) >= fhour) %>%
+  filter(fhour >= hour(timestamp)) %>%
+  group_by(node_id) %>%
+  summarize(t_bmp180 = mean(value_hrf))
+
+# bmp180 pressure hPa
+press_bmp180 <- sensor_data %>%
+  filter(sensor == "bmp180") %>%
+  filter(parameter == "pressure") %>%
+  filter(hour(timestamp) >= fhour) %>%
+  filter(fhour >= hour(timestamp)) %>%
+  group_by(node_id) %>%
+  summarize(p_bmp180 = mean(value_hrf))
+
+# Join Sensor Data by Nodes
+j1 <- merge(temp_tsys01, temp_htu21d, by = c("node_id"), all = TRUE)
+j2 <- merge(j1, temp_bmp180, by = c("node_id"), all = TRUE)
+j3 <- merge(j2, press_bmp180, by = c("node_id"), all = TRUE)
+j4 <- merge(j3, humid_htu21d, by = c("node_id"), all = TRUE)
+node_data <- merge(j4, nodes, by = c("node_id"))
+
+# Convert node data to spatial object
+coordinates(node_data) <- node_data[,c("lon", "lat")]
+
+# set data to the same projection
+# proj4string(node.temps) <- CRS("+init=epsg:4326")
+# Error in CRS("+init=epsg:4326") : NA
+# https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
+proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
+
+writeOGR(node_data, ".", "aot_all_sensors", driver = "ESRI Shapefile")
+```
+
+
+### Explore Sensor Data in GeoDa
+
+**Note:** the shapefile data is temperature, humidity, and pressure data from
+Chicago 2018-08-25 between 12:00 and 13:00. This means that because it is August
+in Chicago the temperature should be ~ 20 C and probably not below 0 C or above 40 C.
+
+Each node has a tsys01 (temperature only), htu21d (temperature and humidity),
+and bmp180 (temperature and pressure) sensor. We are only interested in temperature, 
+yet investigating the data for each sensor could provide some insight into what data
+to use for the final temperature data set.
+
+The tsys01 sensor is a **High Accuracy Temperature Sensor**, so its data considered
+as first priority for the node's final reading. Sometimes the tsys01 provides readings that
+do not make sense, and for other nodes there is no data for the tsys01 sensor.
+ We need to use GeoDa to explore the variables so the best decision can be made about
+the final temperature data.
+
+
+#### Table Investigation
+
+GeoDa has a table view to investigate the shapefile attributes.
+
+![GeoDa Table View](Data/table_view.PNG)
+
+
+```{r shapefile_table, echo = FALSE}
+library(tidyverse)
+library(knitr)
+
+shapefile_table <- data.frame(node_id = c("001e06109416", "001e0610fb4c", "001e0611536c",
+                                          "001e0610e809"),
+                 t_tsys01 = c(21.01, 20.91, "NA", -4.21),
+                 t_htu21d = c(21.55, "NA", 22.33, 20.44),
+                 t_bmp180 = c(40.92, 20.93, 43.51, 21.09))
+
+kable(shapefile_table, align = "lccc", caption = "Sensor Temperature Variation")
+```
+
+
+**Notice** that for this sample some nodes have large differences in temperature values between
+sensors, and some nodes have no data for a particular sensor. To fix this we could use the
+temperature data from tsys01 first then if there is a problem, i.e. an outlier or NA
+then we could use data from the other sensors from the same node. Also some values
+are below 0 C and above 40 C.
+
+
+#### GeoDa Box Plots
+
+![GeoDa Table View](Data/box_plots_all.PNG)
+
+**Notice** that each sensor has outliers, and some sensors have large variation
+between temperature readings.
+
+
+#### GeoDa Scatter Plots
+
+To answer the question **Why does tsys01 sometimes produce incorrect data?** we
+could look for correlation between various sensor data using scatter plots.
+
+
+**Compare temp_tsys01 to Each Sensor**
+
+```{r sp_table, echo=FALSE}
+library(tidyverse)
+library(knitr)
+
+img1_path <- "Data/sp1.PNG"
+img2_path <- "Data/sp2.PNG"
+img3_path <- "Data/sp3.PNG"
+img4_path <- "Data/sp4.PNG"
+
+temp_htu21d <- data.frame(
+  t_htu21d = c(paste0("![](", img1_path, "){#id .class height=400px}"), "temp_tsys01 vs. temp_htu21d")
+)
+humid_htu21d <- data.frame(
+  h_htu21d = c(paste0("![](", img2_path, "){#id .class height=400px}"), "temp_tsys01 vs. humid_htu21d")
+)
+temp_bmp180 <- data.frame(
+  t_bmp180 = c(paste0("![](", img3_path, "){#id .class height=400px}"), "temp_tsys01 vs. temp_bmp180")
+)
+press_bmp180 <- data.frame(
+  p_bmp180 = c(paste0("![](", img4_path, "){#id .class height=400px}"), "temp_tsys01 vs. press_bmp180")
+)
+
+knitr::kable(temp_htu21d, format = 'pandoc')
+
+knitr::kable(humid_htu21d, format = 'pandoc')
+
+knitr::kable(temp_bmp180, format = 'pandoc')
+
+knitr::kable(press_bmp180, format = 'pandoc')
+```
+
+
+### Generate Final Shapefile
+
+There appears to be no correlation between the other temperature sensors on the same
+node for extreme values. Also there appears to be no correlation between pressure or
+humidity.
+
+
+**Check Nodes at Various Hours**
+
+```{r temp_table, echo = FALSE}
+library(tidyverse)
+library(knitr)
+
+temp_table <- data.frame(node_id = c("001e0610e809", "Mean All Nodes", "001e0611536c"),
+                 Hour7 = c(-7.6, 19.3, "NA"),
+                 Hour12 = c(-4.2, 20.3, "NA"),
+                 Hour22 = c(18.6, 30.8, "NA"))
+
+kable(temp_table, align = "lccc", caption = "Outlier Nodes Various Hours")
+```
+
+
+It appears that node **001e0610e809** is not working correctly, and node **001e0611536c**
+has no tsys01 sensor.
+
+In the future we could replace faulty nodes, add tsys01 sensors, or create an algorithm
+to use temperature data from the other sensors.
+
+For the final shapefile we will remove the outlier nodes and use only the tsys01 sensor
+data for the temperature surface.
+
+```{r final_node_data}
+# Load Packages
+library(tidyverse)
+library(lubridate)
+library(sp)
+library(rgdal)
+
+# Clear Workspace
+rm(list = ls())
+
+# Read Data
+sensor_data <- read.csv("Data/data.csv.gz")
+nodes <- read.csv("Data/nodes.csv")
+
+# Fix timestamp so GeoDa doesn't crash on import
+sensor_data$timestamp <- ymd_hms(sensor_data$timestamp)
+nodes$start_timestamp <- ymd_hms(nodes$start_timestamp)
+nodes$end_timestamp <- ymd_hms(nodes$end_timestamp)
+
+# Filter Sensors by Sensor for hour
+fhour <- 12 # filter hour
+
+# tsys01 temperature C
+temp_tsys01 <- sensor_data %>%
+  filter(sensor == "tsys01") %>%
+  filter(parameter == "temperature") %>%
+  filter(hour(timestamp) >= fhour) %>%
+  filter(fhour >= hour(timestamp)) %>%
+  group_by(node_id) %>%
+  summarize(t_tsys01 = mean(value_hrf))
+
+# Remove outlier nodes 001e0610e809, and 001e0611536c
+temp_tsys01 <- subset(temp_tsys01, node_id != "001e0610e809")
+temp_tsys01 <- subset(temp_tsys01, node_id != "001e0611536c")
+
+# Join Sensor Data by Nodes
+node_data <- merge(temp_tsys01, nodes, by = c("node_id"))
+
+# Convert node data to spatial object
+coordinates(node_data) <- node_data[,c("lon", "lat")]
+
+# set data to the same projection
+# proj4string(node.temps) <- CRS("+init=epsg:4326")
+# Error in CRS("+init=epsg:4326") : NA
+# https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
+proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
+
+writeOGR(node_data, ".", "aot_final", driver = "ESRI Shapefile")
+```
+
+
+## Results
+
+## Discussion
+
+## Conclusion
+
+## References
+
+* Johnson, Crystal, "Using Kriging, Cokriging, and GIS to Visualize Fe and Mn in Groundwater" (2015). Electronic Theses and Dissertations. Paper 2498. https://dc.etsu.edu/etd/2498 , https://dc.etsu.edu/cgi/viewcontent.cgi?article=3881&context=etd
+
+* MAPPING AOT DATA WITH SPATIAL STATISTICS, ARRAY OF THINGS WORKSHOP 2018
+FACILITATED BY M. KOLAK https://geodacenter.github.io/aot-workshop/
+
+* PennState GEOG 586 - Geographic Information Analysis L4: Cluster Analysis: Spatial Autocorrelation https://www.e-education.psu.edu/geog586/node/524

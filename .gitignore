@@ -7,7 +7,6 @@
 *.prj
 *.log
 *.pdf
-*.Rmd
 *.csv
 *.csv.gz
 

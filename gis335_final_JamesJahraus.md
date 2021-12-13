@@ -14,6 +14,7 @@ James Jahraus
     -   [Generate Shapefile for All
         Sensors](#generate-shapefile-for-all-sensors)
     -   [Explore Sensor Data in GeoDa](#explore-sensor-data-in-geoda)
+    -   [Generate Final Shapefile](#generate-final-shapefile)
 -   [Results](#results)
 -   [Discussion](#discussion)
 -   [Conclusion](#conclusion)
@@ -202,8 +203,7 @@ coordinates(node_data) <- node_data[, c("lon", "lat")]
 # https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
 proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
 
-# writeOGR(node_data, '.', 'aot_all_sensors', driver =
-# 'ESRI Shapefile')
+writeOGR(node_data, ".", "aot_all_sensors", driver = "ESRI Shapefile")
 ```
 
 ### Explore Sensor Data in GeoDa
@@ -228,7 +228,7 @@ temperature data.
 
 #### Table Investigation
 
-GeoDa has table view to investigate the shapefile attributes.
+GeoDa has a table view to investigate the shapefile attributes.
 
 ![GeoDa Table View](Data/table_view.PNG)
 
@@ -260,6 +260,103 @@ variation between temperature readings.
 To answer the question **Why does tsys01 sometimes produce incorrect
 data?** we could look for correlation between various sensor data using
 scatter plots.
+
+**Compare temp_tsys01 to Each Sensor**
+
+| t_htu21d                                                      |
+|:--------------------------------------------------------------|
+| <img src="Data/sp1.PNG" id="id" class="class" height="400" /> |
+| temp_tsys01 vs. temp_htu21d                                   |
+
+| h_htu21d                                                      |
+|:--------------------------------------------------------------|
+| <img src="Data/sp2.PNG" id="id" class="class" height="400" /> |
+| temp_tsys01 vs. humid_htu21d                                  |
+
+| t_bmp180                                                      |
+|:--------------------------------------------------------------|
+| <img src="Data/sp3.PNG" id="id" class="class" height="400" /> |
+| temp_tsys01 vs. temp_bmp180                                   |
+
+| p_bmp180                                                      |
+|:--------------------------------------------------------------|
+| <img src="Data/sp4.PNG" id="id" class="class" height="400" /> |
+| temp_tsys01 vs. press_bmp180                                  |
+
+### Generate Final Shapefile
+
+There appears to be no correlation between the other temperature sensors
+on the same node for extreme values. Also there appears to be no
+correlation between pressure or humidity.
+
+**Check Nodes at Various Hours**
+
+| node_id        | Hour7 | Hour12 | Hour22 |
+|:---------------|:-----:|:------:|:------:|
+| 001e0610e809   | -7.6  |  -4.2  |  18.6  |
+| Mean All Nodes | 19.3  |  20.3  |  30.8  |
+| 001e0611536c   |  NA   |   NA   |   NA   |
+
+Outlier Nodes Various Hours
+
+It appears that node **001e0610e809** is not working correctly, and node
+**001e0611536c** has no tsys01 sensor.
+
+In the future we could replace faulty nodes, add tsys01 sensors, or
+create an algorithm to use temperature data from the other sensors.
+
+For the final shapefile we will remove the outlier nodes and use only
+the tsys01 sensor data for the temperature surface.
+
+``` r
+# Load Packages
+library(tidyverse)
+library(lubridate)
+library(sp)
+library(rgdal)
+
+# Clear Workspace
+rm(list = ls())
+
+# Read Data
+sensor_data <- read.csv("Data/data.csv.gz")
+nodes <- read.csv("Data/nodes.csv")
+
+# Fix timestamp so GeoDa doesn't crash on import
+sensor_data$timestamp <- ymd_hms(sensor_data$timestamp)
+nodes$start_timestamp <- ymd_hms(nodes$start_timestamp)
+nodes$end_timestamp <- ymd_hms(nodes$end_timestamp)
+
+# Filter Sensors by Sensor for hour
+fhour <- 12  # filter hour
+
+# tsys01 temperature C
+temp_tsys01 <- sensor_data %>%
+    filter(sensor == "tsys01") %>%
+    filter(parameter == "temperature") %>%
+    filter(hour(timestamp) >= fhour) %>%
+    filter(fhour >= hour(timestamp)) %>%
+    group_by(node_id) %>%
+    summarize(t_tsys01 = mean(value_hrf))
+
+# Remove outlier nodes 001e0610e809, and 001e0611536c
+temp_tsys01 <- subset(temp_tsys01, node_id != "001e0610e809")
+temp_tsys01 <- subset(temp_tsys01, node_id != "001e0611536c")
+
+# Join Sensor Data by Nodes
+node_data <- merge(temp_tsys01, nodes, by = c("node_id"))
+
+# Convert node data to spatial object
+coordinates(node_data) <- node_data[, c("lon", "lat")]
+
+# set data to the same projection proj4string(node.temps)
+# <- CRS('+init=epsg:4326') Error in CRS('+init=epsg:4326')
+# : NA
+# https://gis.stackexchange.com/questions/387072/r-spcrs-returns-na
+proj4string(node_data) <- CRS(sf::st_crs(4326)[[2]])
+
+writeOGR(node_data, ".", "aot_final", driver = "ESRI Shapefile")
+```
 
 ## Results
 
