@@ -18,6 +18,7 @@ James Jahraus
         Autocorrelation](#investigate-spatial-autocorrelation)
 -   [Interpolate a Temperature
     Surface](#interpolate-a-temperature-surface)
+-   [Conclusion](#conclusion)
 
 <!-- Environment Setup -->
 
@@ -271,3 +272,10 @@ Kriging to interpolate the temperature surface.
 **Choose the Hour for Node Data**
 
 ![](gis335_presentation_JamesJahraus_files/figure-gfm/krig-1.png)<!-- -->
+
+## Conclusion
+
+GeoDa is excellent at exploratory spatial data analysis, just one of the
+components of spatial data analysis. The other components,
+visualization, spatial modeling, and data transformation can be
+performed in collaboration with other systems like ArcGis Pro and R.

@@ -355,3 +355,11 @@ m.exp <- tm_shape(chi.temp.kriged.exp) +
 
 tmap_arrange(m.exp)
 ```
+
+
+## Conclusion
+
+GeoDa is excellent at exploratory spatial data analysis, just one of the components of
+spatial data analysis. The other components, visualization, spatial modeling, and
+data transformation can be performed in collaboration with other
+systems like ArcGis Pro and R.
