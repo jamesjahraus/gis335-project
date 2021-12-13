@@ -1,3 +1,15 @@
+# Custom
+/Data
+*.zip
+*.Rproj
+*.shp
+*.shx
+*.dbf
+*.prj
+*.log
+*.pdf
+*.Rmd
+
 # History files
 .Rhistory
 .Rapp.history
